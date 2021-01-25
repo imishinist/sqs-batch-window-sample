@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  TestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Event: "s3:ObjectCreated:*"
+            Topic: !Ref SNSTopic
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+  SNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref SNSTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              AWS: "*"
+            Action:
+              - "SNS:Publish"
+            Resource: !Sub "arn:aws:sns:*:${AWS::AccountId}:*"
+            Condition:
+              StringEquals:
+                "AWS:SourceOwner": !Sub "arn:aws:s3:::${TestBucket}"
+
+  IngressQueueSNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SNSTopic
+      Protocol: sqs
+      Endpoint: !GetAtt IngressQueue.Arn
+
+  IngressQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      DelaySeconds: 300
+      MessageRetentionPeriod: 432000
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 1200
+  IngressQueuePolicy:
+    Type: "AWS::SQS::QueuePolicy"
+    Properties:
+      Queues:
+        - !Ref IngressQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - "SQS:SendMessage"
+            Resource: !GetAtt IngressQueue.Arn
+            Condition:
+              ArnLike:
+                "AWS:SourceArn": !Ref SNSTopic
+
+  TestLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: test
+      Runtime: go1.x
+      CodeUri: build/test
+      MemorySize: 128
+      Timeout: 30
+      Events:
+        Stream:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt IngressQueue.Arn
+            BatchSize: 600
+            MaximumBatchingWindowInSeconds: 60
+            Enabled: true
+      Role: !GetAtt TestLambdaRole.Arn
+  TestLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+
+Outputs:
+  TestBucketARN:
+    Value: !GetAtt TestBucket.Arn
