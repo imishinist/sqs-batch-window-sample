@@ -3,7 +3,7 @@ BUCKET="cloudformation-package-bucket-imishinist"
 
 .PHONY: build
 build: main.go
-	go build -o build/test/test .
+	GOOS=linux GOARCH=amd64 go build -o build/test/test .
 
 .PHONY: package
 package: template.yaml
