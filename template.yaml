@@ -98,4 +98,4 @@ Resources:
 
 Outputs:
   TestBucketARN:
-    Value: !GetAtt TestBucket.Arn
+    Value: !Ref TestBucket
