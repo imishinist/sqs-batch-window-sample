@@ -22,13 +22,13 @@ Resources:
         Statement:
           - Effect: "Allow"
             Principal:
-              AWS: "*"
+              Service: "s3.amazonaws.com"
             Action:
-              - "SNS:Publish"
-            Resource: !Sub "arn:aws:sns:*:${AWS::AccountId}:*"
+              - "sns:Publish"
+            Resource: !Ref SNSTopic
             Condition:
-              StringEquals:
-                "AWS:SourceOwner": !Sub "arn:aws:s3:::${TestBucket}"
+              ArnEquals:
+                "aws:SourceArn": !GetAtt TestBucket.Arn
 
   IngressQueueSNSTopicSubscription:
     Type: AWS::SNS::Subscription
@@ -54,13 +54,13 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: "*"
+              Service: "sns.amazonaws.com"                
             Action:
-              - "SQS:SendMessage"
+              - "sqs:SendMessage"
             Resource: !GetAtt IngressQueue.Arn
             Condition:
-              ArnLike:
-                "AWS:SourceArn": !Ref SNSTopic
+              ArnEquals:
+                "aws:SourceArn": !Ref SNSTopic
 
   TestLambda:
     Type: AWS::Serverless::Function

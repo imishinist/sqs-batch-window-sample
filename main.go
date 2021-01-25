@@ -39,8 +39,8 @@ func handler(ctx context.Context, event events.SQSEvent) error {
 
 		s3Records = append(s3Records, records.Records...)
 	}
-	fmt.Printf("record num: %d", len(event.Records))
-	fmt.Printf("s3 record num: %d", len(s3Records))
+	fmt.Printf("record num: %d\n", len(event.Records))
+	fmt.Printf("s3 record num: %d\n", len(s3Records))
 	return nil
 }
 
