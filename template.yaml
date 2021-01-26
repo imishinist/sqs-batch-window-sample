@@ -1,6 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
+Parameters:
+  BatchSize:
+    Type: Number
+    Default: 10
+  ConcurrentExecution:
+    Type: Number
+    Default: 2
+  BatchWindowSeconds:
+    Type: Number
+    Default: 10
+
 Resources:
   TestBucket:
     Type: AWS::S3::Bucket
@@ -70,13 +81,14 @@ Resources:
       CodeUri: build/test
       MemorySize: 128
       Timeout: 30
+      ReservedConcurrentExecutions: !Ref ConcurrentExecution
       Events:
         Stream:
           Type: SQS
           Properties:
             Queue: !GetAtt IngressQueue.Arn
-            BatchSize: 600
-            MaximumBatchingWindowInSeconds: 60
+            BatchSize: !Ref BatchSize
+            MaximumBatchingWindowInSeconds: !Ref BatchWindowSeconds
             Enabled: true
       Role: !GetAtt TestLambdaRole.Arn
   TestLambdaRole:

@@ -1,5 +1,5 @@
 
-BUCKET="cloudformation-package-bucket-imishinist"
+BUCKET=""
 
 .PHONY: build
 build: main.go
